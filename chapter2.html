@@ -49,17 +49,35 @@
         #btn-yes { background: #ff4757; left: 30px; bottom: 20px; box-shadow: 0 4px 10px rgba(255, 71, 87, 0.4); }
         #btn-no { background: #747d8c; right: 30px; bottom: 20px; }
 
-        /* 信件 */
+        /* 信件相关样式 */
         #letter-layer {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); z-index: 150; display: flex; justify-content: center; align-items: center;
         }
         #letter-paper {
-            width: 85%; max-width: 500px; min-height: 60%; background: #fffdf0;
-            padding: 30px; box-sizing: border-box; border-radius: 5px;
+            width: 85%; max-width: 500px; height: 75%; background: #fffdf0;
+            padding: 20px 25px; box-sizing: border-box; border-radius: 5px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5); font-family: sans-serif;
-            color: #333; line-height: 1.6; font-size: 16px; position: relative;
+            color: #333; line-height: 1.6; font-size: 15px; position: relative;
             transform: scale(0.1); transition: transform 0.5s; overflow-y: auto;
+            display: flex; flex-direction: column;
+        }
+        /* 信件段落动画 */
+        .letter-p {
+            opacity: 0; transform: translateY(10px); transition: all 0.8s ease;
+            margin-bottom: 15px; text-align: justify;
+        }
+        .letter-p.show { opacity: 1; transform: translateY(0); }
+        
+        #letter-hint {
+            margin-top: auto; text-align: center; color: #999; font-size: 12px;
+            padding-top: 10px; animation: blink 1.5s infinite;
+        }
+        @keyframes blink { 0% {opacity:0.3} 50% {opacity:1} 100% {opacity:0.3} }
+
+        #finish-letter-btn {
+            display: none; text-align: right; margin-top: 20px; color:#ff4757; 
+            font-weight:bold; cursor: pointer; padding: 10px;
         }
 
         /* 相册 */
@@ -137,13 +155,14 @@
         </div>
     </div>
 
-    <div id="letter-layer" style="display:none;" onclick="closeLetter()">
-        <div id="letter-paper" onclick="event.stopPropagation();">
-            <p>亲爱的诺子：</p>
-            <p>这一路走来，我们像游戏里一样，躲过了无数障碍，也收集了无数的小确幸。</p>
-            <p>我想带你看遍世间美景，但其实，你才是我眼里最美的风景。</p>
-            <p>接下来的回忆，是我们爱的见证...</p>
-            <p style="text-align: right; margin-top: 30px; color:#ff4757; font-weight:bold;" onclick="closeLetter()">[点击此处继续]</p>
+    <!-- ✉️ 信件层 (修改了结构以支持分段显示) -->
+    <div id="letter-layer" style="display:none;" onclick="nextLetterPart()">
+        <div id="letter-paper" onclick="nextLetterPart()">
+            <!-- 内容动态生成 -->
+            <div id="letter-content-area"></div>
+            
+            <div id="letter-hint">▼ 点击屏幕继续阅读 ▼</div>
+            <div id="finish-letter-btn">[点击查看相册]</div>
         </div>
     </div>
 
@@ -180,7 +199,6 @@
             car_img: 'car.png',    
             end_bg: 'end_bg.jpg', 
             
-            // 相册配置
             photos: [
                 { t: "我们一起做的第一棵圣诞树", d: "2022.12.25", img: 'p1.jpg' },
                 { t: "你画的我", d: "2023.9.25", img: 'p2.jpg' },
@@ -191,15 +209,76 @@
             ]
         };
 
+        // 💌 信件内容数组 (分段显示)
+        const letterTexts = [
+            "阿铭，见字如面。",
+            "我们就像游戏里那样一起走出了好远，越过了好多的阻碍，我真想在现实中和你一起自驾游一次，一起欣赏沿途的美景，但实际上你对我而言就是最美的景色。未来的道路没有尽头，我们还有好多的时间。",
+            "这是我们过的第四个情人节，而我今天才搞清楚了情人节和七夕的区别，但是对于我们来说其实又没有什么区别，我曾经说你是我世界之外又是我世界之内的人，这句话的这两个世界一个代表世俗的世界，一个代表我内心的世界，而你就是远离世俗世界而直接进入我内心世界的人。",
+            "所以虽然我们目前确实受着现实情况的影响，但我想我们仍然能够直接抵达对方，因为我们绕过了现实，直接存在于对方的世界中，心意相通。",
+            "我经历了一个从真正的小孩，到将自己伪装成大人，再到发现自己内心其实仍然还是一个小孩的过程。不知道你还记不记得，我之前说我想当一个成熟的男人，我想当一个在任何事上都游刃有余的人，但我现在发现我当不了这样的人，我从小就是在被保护的环境下长大的，上了大学之后，我面对各种各样的糟糕情况时，所有事实都在向我表明，我现在所看到的才是真正的世界的一角，而这只是一个开始。",
+            "我只是一个孩子，一个无法把一些处理得游刃有余的孩子，我并没有接纳这样的自己，但是你接纳了这样的我，我可以肆无忌惮的在你这里就当一个孩子。",
+            "这个秋天真是一个情感受挫的季节，我周围的许多人都经历了分手，但值得庆幸的是我们挺过去了，而且我们的感情也迎来了升级。",
+            "我想对你说的是，虽然上次我自己跑到河南去没见到你，但是我去那边真的真的很开心，一方面我去的是你的城市，那时我就觉得离你很近，另一方面这是我第一次自己一个人去另外的一个城市，我非常享受这个过程。",
+            "但无论怎么样，我都没料到你会在一个毫无预兆的平凡的一天中突然出现在我的城市，让这天变得无与伦比的梦幻，让我弱小的内心被浓密的爱包裹。",
+            "在那棵树下我小心翼翼的抱着你，就像是我抱着一个小小的小宝宝，那么寒冷的天，你走过了那么多路，到那时走一小步就已经摇摇欲坠，在我的怀里颠颠倒倒，像个软绵绵的小企鹅一样，我当时真是又觉得你太可爱了，又觉得实在是心疼。",
+            "我拿出我的手套给你戴上，你那双小小的手戴着大大的手套，那手套手指前面多出来的部分在空中乱七八糟的耷拉着，或是岔了出来，寒冷中你的动作慢慢的，像个孩童般将两只小手戳在一起，玩弄着手套多出来的部分，真像个可爱的小宝宝，我真喜欢我的小宝宝，于是我抱的不知不觉更紧了，导致你整个身体仰着倒在我怀里。",
+            "你上车离开之后，我一个人回到教室做我的雕塑，我当时觉得一切仅发生在一瞬间，一眨眼的功夫我又要面对这些该死的作业了，做梦只做了一小会。我也没有想到你会想要我直接去你住的地方，我们在那里又度过了梦幻般的夜晚。",
+            "有时候我真的很害怕这个世界，远离这个世界我又不知道该怎样自居，所以我是真的很想要你时刻都抱紧我，时刻让我陷入柔软和温暖中，跟你呆在一起我什么烦心事都没有想起来，就只想一直粘着你，真希望我们能够一直一直在一起不再分开。",
+            "但不得不说其实上次我们短暂的矛盾让我们变得更加紧密了，我们找到了一种适合我们相处的方式，我们对对方都有个亲昵的昵称，任何时候，无论在谈论什么，或严肃或放松，这种昵称代表一种态度，代表我们都在心平气和的与对方交流，这样可以减少很多的误会，有什么是不能心平气和的聊聊或者撒个娇卖个萌解决的呢？",
+            "情人节快乐！我最爱的小宝贝王铭萱，希望我们一直一直在一起，我永远永远爱你！",
+            "2026.2.14"
+        ];
+
+        let letterIndex = 0;
+        let isLetterFinished = false;
+
+        function nextLetterPart() {
+            if (isLetterFinished) {
+                // 如果信读完了，点击就关闭信件，进入相册
+                closeLetter();
+                return;
+            }
+
+            // 检查是否还有内容
+            if (letterIndex < letterTexts.length) {
+                const container = document.getElementById('letter-content-area');
+                const p = document.createElement('p');
+                p.className = 'letter-p';
+                p.innerText = letterTexts[letterIndex];
+                container.appendChild(p);
+
+                // 强制重绘触发 transition
+                setTimeout(() => p.classList.add('show'), 50);
+
+                // 自动滚动到底部
+                const paper = document.getElementById('letter-paper');
+                setTimeout(() => {
+                    paper.scrollTo({ top: paper.scrollHeight, behavior: 'smooth' });
+                }, 100);
+
+                letterIndex++;
+            } else {
+                // 内容全部显示完毕
+                isLetterFinished = true;
+                document.getElementById('letter-hint').style.display = 'none';
+                document.getElementById('finish-letter-btn').style.display = 'block';
+                
+                // 再滚一次到底部确保看到按钮
+                const paper = document.getElementById('letter-paper');
+                setTimeout(() => {
+                    paper.scrollTo({ top: paper.scrollHeight, behavior: 'smooth' });
+                }, 100);
+            }
+        }
+
         // --- 🎵 音乐播放逻辑 ---
         function tryPlayMusic2() {
             var audio = document.getElementById('bgm2');
             if (audio.paused) {
-                audio.volume = 0.5; // 音量适中
+                audio.volume = 0.5;
                 audio.play().catch(e => console.log("等待交互..."));
             }
         }
-        // 只要一点屏幕（比如点对话框），音乐就开始
         document.body.addEventListener('click', tryPlayMusic2);
         document.body.addEventListener('touchstart', tryPlayMusic2);
 
@@ -263,7 +342,7 @@
                 return;
             }
             box.style.display = 'block';
-            tryPlayMusic2(); // 试图播放音乐
+            tryPlayMusic2(); 
             
             const item = list[scriptIdx];
             document.getElementById('char-name').innerText = item.n;
@@ -452,7 +531,6 @@
                     document.getElementById('energy-label').innerHTML = "爱心❤️";
                     document.getElementById('energy-fill').style.background = "#ff6b81";
 
-                    // 字幕提示
                     sub.innerText = "收集爱心，远离心碎！";
                     sub.style.bottom = "auto"; 
                     sub.style.top = "15%";    
@@ -502,7 +580,13 @@
             document.getElementById('choice-container').style.display = 'none';
             const letter = document.getElementById('letter-layer');
             letter.style.display = 'flex';
-            setTimeout(() => { document.getElementById('letter-paper').style.transform = "scale(1)"; }, 50);
+            
+            // 放大信纸并开始显示第一段
+            setTimeout(() => { 
+                document.getElementById('letter-paper').style.transform = "scale(1)";
+                // 稍微延迟一点点显示第一段
+                setTimeout(nextLetterPart, 500);
+            }, 50);
         }
 
         function closeLetter() {
