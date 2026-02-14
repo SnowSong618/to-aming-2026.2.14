@@ -728,5 +728,27 @@
             if(k==='a'||k==='d') {input.x=0; input.left=false; input.right=false;}
         });
     </script>
+<audio id="bgm1" src="shijie.mp3" loop preload="auto"></audio>
+
+<script>
+    // 自动播放音乐逻辑 (针对第一章)
+    // 监听全屏点击，只要用户点任何地方，就开始播放
+    function playMusic1() {
+        var audio = document.getElementById('bgm1');
+        if (audio.paused) {
+            audio.volume = 0.6; // 音量 60%
+            audio.play().then(() => {
+                console.log("第一章音乐播放成功");
+            }).catch(error => {
+                console.log("等待用户点击播放...");
+            });
+        }
+    }
+
+    // 绑定点击和触摸事件
+    document.body.addEventListener('click', playMusic1);
+    document.body.addEventListener('touchstart', playMusic1);
+</script>
+    
 </body>
 </html>
