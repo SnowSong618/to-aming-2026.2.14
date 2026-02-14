@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- 适配全屏 App 模式 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#333">
     <title>爱的旅途 - Chapter 2</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #333; font-family: "Microsoft YaHei", sans-serif; touch-action: none; user-select: none; -webkit-user-select: none; }
         canvas { display: block; width: 100%; height: 100%; }
 
-        /* UI - 默认隐藏 (display: none)，等游戏开始再显示 */
+        /* UI */
         #game-ui { 
             display: none; 
             position: absolute; top: 10px; left: 10px; z-index: 10; 
@@ -31,7 +35,7 @@
         /* 转场 & 结局 */
         #transition-layer {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(#a18cd1, #fbc2eb); /* 默认渐变，防止加载慢白屏 */
+            background: linear-gradient(#a18cd1, #fbc2eb);
             z-index: 50; opacity: 0; transition: opacity 2s;
             flex-direction: column; justify-content: center; align-items: center;
             background-size: cover; background-position: center;
@@ -85,7 +89,6 @@
             box-sizing: border-box;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 100;
         }
-        /* 头像样式 */
         #char-avatar {
             position: absolute; left: -10px; bottom: 10px;
             width: 100px; height: 100px; 
@@ -94,7 +97,6 @@
             border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
             display: none; 
         }
-
         #char-name { font-weight: bold; color: #d6336c; font-size: 18px; margin-bottom: 5px; }
         #dialog-text { font-size: 16px; line-height: 1.5; color: #333; }
         
@@ -109,6 +111,9 @@
     </style>
 </head>
 <body>
+
+    <!-- 🎵 音乐组件 -->
+    <audio id="bgm2" src="pingxing.mp3" loop preload="auto"></audio>
 
     <canvas id="gameCanvas"></canvas>
 
@@ -134,9 +139,9 @@
 
     <div id="letter-layer" style="display:none;" onclick="closeLetter()">
         <div id="letter-paper" onclick="event.stopPropagation();">
-            <p>亲爱的阿铭：</p>
-            <p>这一路走来，我们像游戏里一样，躲过了无数障碍，也收集了无数的确幸。</p>
-            <p>我真的很想和你一起看遍世间美景，但其实，你才是我眼里最美的风景。</p>
+            <p>亲爱的诺子：</p>
+            <p>这一路走来，我们像游戏里一样，躲过了无数障碍，也收集了无数的小确幸。</p>
+            <p>我想带你看遍世间美景，但其实，你才是我眼里最美的风景。</p>
             <p>接下来的回忆，是我们爱的见证...</p>
             <p style="text-align: right; margin-top: 30px; color:#ff4757; font-weight:bold;" onclick="closeLetter()">[点击此处继续]</p>
         </div>
@@ -167,26 +172,39 @@
 
     <script>
         // ==========================================
-        // 👇👇👇 核心配置区 (已根据你的要求严格修正) 👇👇👇
+        // 配置区
         // ==========================================
         const CONFIG = {
             aming_avatar: 'aming.jpg',
             nuozi_avatar: 'nuozi.jpg',
             car_img: 'car.png',    
-            end_bg: 'end_bg.jpg',  // 已修正：end_bg.jpg
+            end_bg: 'end_bg.jpg', 
             
-            // 相册配置 (所有图片后缀已修正为 .jpg)
+            // 相册配置
             photos: [
-                { t: "我们一起做的第一棵圣诞树", d: "2022.12.25", img: 'p1.jpg' }, // 改为 p1.jpg
-                { t: "你画的我，我很喜欢", d: "2023.9.25", img: 'p2.jpg' },
-                { t: "我们在我的世界里建的小家", d: "2023.10.6", img: 'p3.jpg' }, // 改为 p3.jpg
-                { t: "给你写的歌，你在下面的留言我看到了哦，把我感动坏了", d: "2024.3.29", img: 'p4.jpg' },
-                { t: "这是我们的不分手合约，还记得不？", d: "2025.4.2", img: 'p5.jpg' },
+                { t: "我们一起做的第一棵圣诞树", d: "2022.12.25", img: 'p1.jpg' },
+                { t: "你画的我", d: "2023.9.25", img: 'p2.jpg' },
+                { t: "我们在我的世界里建的小家", d: "2023.10.6", img: 'p3.jpg' },
+                { t: "给你写的歌", d: "2024.3.29", img: 'p4.jpg' },
+                { t: "这是我们的不分手合约", d: "2025.4.2", img: 'p5.jpg' },
                 { t: "我们终于见面了！", d: "2026.1.10至1.11", img: 'p6.jpg' }
             ]
         };
-        // ==========================================
 
+        // --- 🎵 音乐播放逻辑 ---
+        function tryPlayMusic2() {
+            var audio = document.getElementById('bgm2');
+            if (audio.paused) {
+                audio.volume = 0.5; // 音量适中
+                audio.play().catch(e => console.log("等待交互..."));
+            }
+        }
+        // 只要一点屏幕（比如点对话框），音乐就开始
+        document.body.addEventListener('click', tryPlayMusic2);
+        document.body.addEventListener('touchstart', tryPlayMusic2);
+
+        // ==========================================
+        
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
@@ -202,10 +220,9 @@
         let phase1Timer = 0;
         let stopSpawning = false;
 
-        // --- 图片加载逻辑 ---
+        // 图片加载
         const carImg = new Image();
         let carLoaded = false;
-        
         carImg.onload = () => { carLoaded = true; };
         carImg.onerror = () => { carLoaded = false; };
         if(CONFIG.car_img) carImg.src = CONFIG.car_img;
@@ -246,6 +263,8 @@
                 return;
             }
             box.style.display = 'block';
+            tryPlayMusic2(); // 试图播放音乐
+            
             const item = list[scriptIdx];
             document.getElementById('char-name').innerText = item.n;
             document.getElementById('dialog-text').innerText = item.t;
@@ -421,35 +440,28 @@
         function startMidTalkSeamless() {
             stopSpawning = true; 
             const sub = document.getElementById('subtitle');
-            // 诺子说话
             sub.innerText = "诺子：阿铭，你有没有觉得这个开车的过程，就像是我们两个坚毅地排除生活中的种种困难一直走下去？";
             sub.style.opacity = 1;
             
             setTimeout(()=>{
                 sub.innerText = "诺子：我觉得很像，你看";
-                
-                // 3秒后进入第二阶段
                 setTimeout(()=>{
-                    // --- 游戏状态切换 ---
                     gameState = 'GAME2';
                     stopSpawning = false; 
                     player.energy = 0; 
                     document.getElementById('energy-label').innerHTML = "爱心❤️";
                     document.getElementById('energy-fill').style.background = "#ff6b81";
 
-                    // --- 新增：屏幕上方红色提示字幕 ---
+                    // 字幕提示
                     sub.innerText = "收集爱心，远离心碎！";
-                    sub.style.bottom = "auto"; // 清除底部定位
-                    sub.style.top = "15%";     // 移动到屏幕上方
+                    sub.style.bottom = "auto"; 
+                    sub.style.top = "15%";    
                     sub.style.fontSize = "22px";
-                    sub.style.color = "#ff4757"; // 红色字体
+                    sub.style.color = "#ff4757"; 
                     sub.style.fontWeight = "bold";
-                    sub.style.textShadow = "0 0 10px white"; // 增加白色描边确保清晰
+                    sub.style.textShadow = "0 0 10px white";
                     
-                    // 3秒后字幕消失，以免挡住游戏
-                    setTimeout(() => {
-                        sub.style.opacity = 0;
-                    }, 3000);
+                    setTimeout(() => { sub.style.opacity = 0; }, 3000);
 
                 }, 3000); 
             }, 6000); 
@@ -462,7 +474,6 @@
             setTimeout(() => { layer.style.opacity = 1; }, 100);
             setTimeout(() => {
                 if(CONFIG.end_bg) layer.style.backgroundImage = `url(${CONFIG.end_bg})`;
-                
                 gameState = 'END_SCENE';
                 scriptIdx = 0;
                 showDialog(endScript, showChoice);
@@ -517,11 +528,8 @@
             const data = CONFIG.photos[index];
             document.getElementById('p-text').innerText = data.t;
             document.getElementById('p-date').innerText = data.d;
-            
             const imgDiv = document.getElementById('p-img');
-            if(data.img) {
-                imgDiv.style.backgroundImage = `url(${data.img})`;
-            }
+            if(data.img) imgDiv.style.backgroundImage = `url(${data.img})`;
         }
 
         function nextPhoto() {
@@ -530,7 +538,6 @@
             
             const card = document.getElementById('polaroid-card');
             card.style.transform = "translateX(-150%) rotate(-20deg)"; 
-            
             setTimeout(()=>{
                 photoIdx++;
                 loadPhoto(photoIdx);
