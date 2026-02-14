@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>诺子和阿铭的情人节 - 第一章</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: "Microsoft YaHei", sans-serif; user-select: none; -webkit-user-select: none; }
+        
+        /* UI 层 */
+        #ui-layer { pointer-events: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
+        
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; width: 8px; height: 8px;
+            background: rgba(255, 255, 255, 0.9); border-radius: 50%;
+            border: 2px solid #333; transform: translate(-50%, -50%);
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.2); z-index: 20; display: none;
+        }
+
+        /* 摇杆区域 - 位于左下角 */
+        #joystick-zone {
+            position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px;
+            background: rgba(255, 255, 255, 0.1); border-radius: 50%;
+            pointer-events: auto; border: 2px solid rgba(255,255,255,0.4);
+            display: none; z-index: 50;
+        }
+        #joystick-knob {
+            position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
+            background: rgba(255, 255, 255, 0.6); border-radius: 50%;
+            transform: translate(-50%, -50%); pointer-events: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        /* 右侧触摸区域 - 用于转动视角 */
+        #touch-look-zone {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 5; /* 在摇杆之下，但覆盖全屏 */
+            display: none; pointer-events: auto;
+        }
+
+        #dialog-box {
+            display: none; pointer-events: auto;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 600px; height: 160px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 15px; border: 3px solid #ff9a9e;
+            padding: 15px 15px 15px 15px; 
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 100;
+        }
+        #char-avatar {
+            position: absolute; left: -10px; bottom: 10px;
+            width: 130px; height: 130px; 
+            background-color: #eee; border-radius: 10px;
+            background-size: cover; background-position: center;
+            border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            display: none;
+        }
+        #char-name { font-weight: bold; color: #d6336c; font-size: 18px; margin-bottom: 8px; }
+        #dialog-text { font-size: 16px; line-height: 1.5; color: #333; }
+        #next-tip { position: absolute; bottom: 10px; right: 20px; font-size: 12px; color: #888; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        #top-ui { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; }
+        #task-msg {
+            display: inline-block; background: rgba(0,0,0,0.7); color: #fff; 
+            padding: 10px 25px; border-radius: 25px; font-size: 16px; 
+            border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(5px);
+            transition: all 0.3s;
+        }
+
+        #interact-label {
+            display: none; position: absolute; top: 60%; left: 50%; transform: translateX(-50%);
+            background: #ff4757; color: #fff; padding: 8px 16px; 
+            border-radius: 30px; font-size: 15px; font-weight: bold; 
+            box-shadow: 0 4px 10px rgba(255, 71, 87, 0.4);
+            pointer-events: none;
+        }
+
+        .screen {
+            position: absolute; width: 100%; height: 100%; display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); z-index: 200;
+        }
+        .btn {
+            background: #fff; color: #d6336c; border: none; padding: 12px 40px;
+            font-size: 20px; border-radius: 30px; margin-top: 30px; cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); pointer-events: auto;
+        }
+
+        #drive-ui { display: none; position: absolute; bottom: 20px; width: 100%; height: 120px; pointer-events: auto; z-index: 50;}
+        .drive-btn {
+            position: absolute; width: 70px; height: 70px;
+            background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.6); border-radius: 50%;
+            font-size: 30px; text-align: center; line-height: 70px; user-select: none; color: white;
+            backdrop-filter: blur(4px);
+        }
+        .drive-btn:active { background: rgba(255,255,255,0.5); transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen" class="screen">
+        <h1 style="color: white; text-shadow: 0 2px 5px rgba(0,0,0,0.2);">诺子和阿铭的情人节</h1>
+        <button class="btn" onclick="startGame()">点击开始</button>
+    </div>
+
+    <!-- 触摸视角控制层 -->
+    <div id="touch-look-zone"></div>
+
+    <div id="ui-layer">
+        <div id="top-ui"><div id="task-msg"></div></div>
+        <div id="crosshair"></div>
+        <div id="interact-label">点击屏幕拾取</div>
+    </div>
+
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+
+    <div id="drive-ui">
+        <div class="drive-btn" style="left: 30px; bottom: 20px;" id="btn-left">⬅️</div>
+        <div class="drive-btn" style="left: 120px; bottom: 20px;" id="btn-right">➡️</div>
+        <div class="drive-btn" style="right: 30px; bottom: 40px; background:rgba(0,255,0,0.2)" id="btn-gas">💨</div>
+        <div class="drive-btn" style="right: 120px; bottom: 20px; width: 50px; height: 50px; line-height: 50px; font-size:16px; background:rgba(255,0,0,0.2)" id="btn-brake">🛑</div>
+    </div>
+
+    <div id="dialog-box" onclick="nextDialog(event)">
+        <div id="char-avatar"></div>
+        <div id="char-name">角色名</div>
+        <div id="dialog-text">内容...</div>
+        <div id="next-tip">点击继续 ▶</div>
+    </div>
+
+    <div id="end-screen" class="screen" style="display:none">
+        <h1 style="color:white">🎉 第一章完成！</h1>
+        <p style="color:#555; margin-top:0; font-size: 18px;">准备好继续我们的旅程了吗？</p>
+        <button class="btn" onclick="location.href='chapter2.html'">进入第二章</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        const CONFIG = {
+            aming_avatar: 'aming.jpg',
+            nuozi_avatar: 'nuozi.jpg',
+        };
+
+        const Game = { state: 'START', mode: 'NONE', isDialogActive: false };
+        let scene, camera, renderer, raycaster;
+        let interactables = []; 
+        let obstacles = []; 
+        let breakfastMesh, doorMesh;
+        
+        // 玩家
+        const player = { 
+            pos: new THREE.Vector3(-2.5, 1.6, 6), 
+            rot: 0, 
+            height: 1.6, 
+            speed: 0.1, 
+            hasBreakfast: false 
+        };
+
+        // 赛车参数 (速度设为慢速兜风模式：2.5)
+        const car = { 
+            mesh: null, speed: 0, 
+            angle: Math.PI, 
+            maxSpeed: 2.5, // 速度再次降低，非常平稳
+            acceleration: 0.05, // 加速度也很柔和
+            friction: 0.96      
+        };
+
+        const input = { x: 0, y: 0, gas: false, brake: false, left: false, right: false };
+
+        const SCRIPTS = {
+            intro: [
+                {n:"诺子", t:"你好呀阿铭，情人节快乐！欢迎来到专属于我和你的游戏！", img: CONFIG.nuozi_avatar},
+                {n:"诺子", t:"准备好了吗？左手控制移动，右手滑屏控制视角哦！", img: CONFIG.nuozi_avatar}
+            ],
+            house_start: [
+                {n:"阿铭", t:"(在卧室醒来)...哈欠，今天是情人节，我和诺子约好了旅行呢！", img: CONFIG.aming_avatar},
+                {n:"阿铭", t:"我得去客厅拿早饭，然后赶紧去车站接他！", img: CONFIG.aming_avatar}
+            ],
+            get_breakfast: [
+                {n:"阿铭", t:"拿到早饭了！这下可以安心出门了。", img: CONFIG.aming_avatar}
+            ],
+            cant_leave: [
+                {n:"阿铭", t:"不行，我不能空着肚子走，早饭应该在客厅的桌子上。", img: CONFIG.aming_avatar}
+            ],
+            ready_to_leave: [
+                {n:"阿铭", t:"出发去火车站接诺子！", img: CONFIG.aming_avatar}
+            ],
+            meet: [
+                {n:"诺子", t:"哇！哈喽我的老婆，我正要打车去你家呢！没想到你来接我啦！", img: CONFIG.nuozi_avatar},
+                {n:"诺子", t:"走走走，咱们旅行去！", img: CONFIG.nuozi_avatar}
+            ]
+        };
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 500);
+            renderer = new THREE.WebGLRenderer({antialias:true});
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+            
+            raycaster = new THREE.Raycaster();
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambient);
+            
+            const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+            sun.position.set(50, 100, 50);
+            sun.castShadow = true;
+            scene.add(sun);
+
+            document.addEventListener('click', onWorldInteract);
+            
+            animate();
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            init();
+            
+            playScript(SCRIPTS.intro, () => {
+                buildHouseScene();
+                playScript(SCRIPTS.house_start, () => {
+                    Game.state = 'HOUSE';
+                    Game.mode = 'WALK';
+                    document.getElementById('task-msg').innerText = "任务：去客厅找早饭";
+                    document.getElementById('crosshair').style.display = 'block';
+                    document.getElementById('joystick-zone').style.display = 'block';
+                    document.getElementById('touch-look-zone').style.display = 'block'; 
+                });
+            });
+        }
+
+        function buildHouseScene() {
+            scene.background = new THREE.Color(0x87CEEB); 
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+            interactables = [];
+            obstacles = []; 
+
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(24, 24), new THREE.MeshPhongMaterial({color:0xd4a373}));
+            floor.rotation.x = -Math.PI/2;
+            scene.add(floor);
+
+            const ceiling = new THREE.Mesh(new THREE.BoxGeometry(24, 1, 24), new THREE.MeshPhongMaterial({color:0xeeeeee}));
+            ceiling.position.set(0, 5.5, 0); 
+            scene.add(ceiling);
+
+            const houseLight = new THREE.PointLight(0xffaa00, 0.8, 20);
+            houseLight.position.set(0, 4, 0); 
+            scene.add(houseLight);
+
+            const skyGeo = new THREE.SphereGeometry(60, 32, 32);
+            const skyMat = new THREE.MeshBasicMaterial({color:0x87CEEB, side:THREE.BackSide}); 
+            scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+            const addNeighbor = (x, z, col) => {
+                const n = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), new THREE.MeshPhongMaterial({color:col}));
+                n.position.set(x, 0, z);
+                scene.add(n);
+            }
+            addNeighbor(-20, 0, 0xff7675); 
+            addNeighbor(0, 25, 0x55efc4);  
+
+            const addObstacle = (x, z, w, d) => {
+                obstacles.push({x, z, w, d});
+            };
+
+            const addWallWithWindow = (x, z, rotationY) => {
+                const group = new THREE.Group();
+                group.position.set(x, 2.5, z);
+                group.rotation.y = rotationY;
+                
+                const mat = new THREE.MeshPhongMaterial({color:0xffecec});
+                
+                const bottom = new THREE.Mesh(new THREE.BoxGeometry(14, 1.5, 1), mat);
+                bottom.position.y = -1.75;
+                group.add(bottom);
+                const top = new THREE.Mesh(new THREE.BoxGeometry(14, 1.5, 1), mat);
+                top.position.y = 1.75;
+                group.add(top);
+
+                const left = new THREE.Mesh(new THREE.BoxGeometry(5, 2, 1), mat);
+                left.position.set(-4.5, 0, 0);
+                group.add(left);
+                const right = new THREE.Mesh(new THREE.BoxGeometry(5, 2, 1), mat);
+                right.position.set(4.5, 0, 0);
+                group.add(right);
+
+                scene.add(group);
+                
+                if(Math.abs(rotationY) < 0.1 || Math.abs(rotationY - Math.PI) < 0.1) {
+                    addObstacle(x, z, 14, 1);
+                } else {
+                    addObstacle(x, z, 1, 14);
+                }
+            };
+
+            const addSolidWall = (w,h,d,x,z, col=0xffecec) => {
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshPhongMaterial({color:col}));
+                wall.position.set(x, h/2, z);
+                scene.add(wall);
+                addObstacle(x, z, w, d);
+            }
+
+            addSolidWall(20, 5, 1, 0, -10); 
+            addWallWithWindow(0, 10, 0);  
+            addWallWithWindow(-10, 0, Math.PI/2); 
+            addSolidWall(1, 5, 21, 10, 0);  
+            addSolidWall(12, 5, 0.5, -4, 2); 
+
+            const shelf = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 1.5), new THREE.MeshPhongMaterial({color:0x8d5524}));
+            shelf.position.set(0, 2, 8); 
+            scene.add(shelf);
+            addObstacle(0, 8, 6, 1.5);
+            
+            const bed = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 7), new THREE.MeshPhongMaterial({color:0xffffff}));
+            bed.position.set(-6, 0.5, 6);
+            scene.add(bed);
+            addObstacle(-6, 6, 5, 7); 
+
+            const table = new THREE.Mesh(new THREE.BoxGeometry(4, 1.1, 3), new THREE.MeshPhongMaterial({color:0x5c3a21}));
+            table.position.set(-5, 0.55, -5);
+            scene.add(table);
+            addObstacle(-5, -5, 4, 3);
+
+            const sofa = new THREE.Mesh(new THREE.BoxGeometry(5, 1.2, 2), new THREE.MeshPhongMaterial({color:0x556677}));
+            sofa.position.set(5, 0.6, -3);
+            scene.add(sofa);
+            addObstacle(5, -3, 5, 2);
+
+            const bfGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+            const bfMat = new THREE.MeshPhongMaterial({color:0xffff00, emissive:0xaa8800});
+            breakfastMesh = new THREE.Mesh(bfGeo, bfMat);
+            breakfastMesh.position.set(-5, 1.6, -5); 
+            breakfastMesh.name = "breakfast";
+            scene.add(breakfastMesh);
+
+            const hitBox = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial({visible:false}));
+            breakfastMesh.add(hitBox);
+            const bfLight = new THREE.PointLight(0xffff00, 1, 5);
+            bfLight.position.set(0, 0, 0);
+            breakfastMesh.add(bfLight);
+            
+            interactables.push(breakfastMesh);
+
+            doorMesh = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 0.5), new THREE.MeshPhongMaterial({color:0x333333}));
+            doorMesh.position.set(4, 2, -9.6);
+            doorMesh.name = "door";
+            scene.add(doorMesh);
+            interactables.push(doorMesh);
+
+            updateCameraWalk();
+        }
+
+        function buildCityScene() {
+            scene.clear();
+            scene.background = new THREE.Color(0x87CEEB); 
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 150);
+
+            const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+            scene.add(hemi);
+            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+            sun.position.set(100, 200, 100);
+            scene.add(sun);
+
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshPhongMaterial({color:0x888888}));
+            ground.rotation.x = -Math.PI/2;
+            scene.add(ground);
+
+            const points = [
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(0, 0, -100),
+                new THREE.Vector3(-80, 0, -100),
+                new THREE.Vector3(-80, 0, -200),
+                new THREE.Vector3(60, 0, -200),
+                new THREE.Vector3(60, 0, -350)
+            ];
+
+            points.forEach((p, i) => {
+                if (i === points.length - 1) return;
+                const nextP = points[i+1];
+                const vec = new THREE.Vector3().subVectors(nextP, p);
+                const len = vec.length();
+                const angle = Math.atan2(vec.x, vec.z);
+                const midX = (p.x + nextP.x) / 2;
+                const midZ = (p.z + nextP.z) / 2;
+
+                const road = new THREE.Mesh(new THREE.PlaneGeometry(14, len + 10), new THREE.MeshPhongMaterial({color: 0x333333}));
+                road.rotation.x = -Math.PI/2;
+                road.rotation.z = angle;
+                road.position.set(midX, 0.1, midZ);
+                scene.add(road);
+
+                const line = new THREE.Mesh(new THREE.PlaneGeometry(0.5, len + 10), new THREE.MeshBasicMaterial({color: 0x00ff00}));
+                line.rotation.x = -Math.PI/2;
+                line.rotation.z = angle;
+                line.position.set(midX, 0.12, midZ);
+                scene.add(line);
+            });
+
+            const buildingGeo = new THREE.BoxGeometry(10, 1, 10);
+            const buildingMat = new THREE.MeshPhongMaterial({color:0x555566});
+            
+            function distToSegment(p, v, w) {
+                const l2 = v.distanceToSquared(w);
+                if (l2 == 0) return p.distanceTo(v);
+                let t = ((p.x - v.x) * (w.x - v.x) + (p.z - v.z) * (w.z - v.z)) / l2;
+                t = Math.max(0, Math.min(1, t));
+                const proj = new THREE.Vector3(v.x + t * (w.x - v.x), 0, v.z + t * (w.z - v.z));
+                return p.distanceTo(proj);
+            }
+
+            for(let i=0; i<300; i++) {
+                const bx = (Math.random() - 0.5) * 500;
+                const bz = (Math.random() - 0.5) * 500 - 150;
+                const bPos = new THREE.Vector3(bx, 0, bz);
+                
+                let isSafe = true;
+                for(let j=0; j<points.length-1; j++) {
+                    const d = distToSegment(bPos, points[j], points[j+1]);
+                    if (d < 18) { isSafe = false; break; }
+                }
+
+                if (isSafe) {
+                    const h = 20 + Math.random() * 40;
+                    const b = new THREE.Mesh(buildingGeo, buildingMat);
+                    b.scale.y = h;
+                    b.position.set(bx, h/2, bz);
+                    scene.add(b);
+                    if(Math.random() > 0.6) {
+                        const win = new THREE.Mesh(new THREE.PlaneGeometry(2,2), new THREE.MeshBasicMaterial({color:0x8899aa}));
+                        win.position.set(0, h/2 - 5, 5.1);
+                        b.add(win);
+                    }
+                }
+            }
+
+            const endP = points[points.length-1];
+            const station = new THREE.Mesh(new THREE.BoxGeometry(40, 20, 20), new THREE.MeshPhongMaterial({color:0xff6b81}));
+            station.position.set(endP.x, 10, endP.z - 20);
+            scene.add(station);
+
+            const carGroup = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 4.8), new THREE.MeshPhongMaterial({color:0x2563eb}));
+            body.position.y = 0.8;
+            carGroup.add(body);
+            const tailLight = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 0.1), new THREE.MeshBasicMaterial({color:0xff0000}));
+            tailLight.position.set(0, 1, 2.4);
+            carGroup.add(tailLight);
+            
+            car.mesh = carGroup;
+            scene.add(carGroup);
+
+            Game.mode = 'DRIVE';
+            document.getElementById('task-msg').innerText = "任务：沿着绿色中线前往火车站";
+            document.getElementById('crosshair').style.display = 'none';
+            document.getElementById('joystick-zone').style.display = 'none';
+            document.getElementById('touch-look-zone').style.display = 'none'; // 开车时关掉视角层
+            document.getElementById('drive-ui').style.display = 'block';
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if(Game.mode === 'WALK') {
+                updateWalk();
+                checkInteractRay();
+                if(breakfastMesh) {
+                    breakfastMesh.rotation.y += 0.02;
+                    breakfastMesh.rotation.x = Math.sin(Date.now()*0.002) * 0.2;
+                }
+            } else if (Game.mode === 'DRIVE') {
+                updateDrive();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function updateWalk() {
+            if (Game.isDialogActive) return;
+
+            const fwdSpeed = input.y * player.speed; 
+            const sideSpeed = -input.x * player.speed;
+
+            // 计算移动向量
+            const dx = Math.sin(player.rot) * fwdSpeed + Math.cos(player.rot) * sideSpeed;
+            const dz = Math.cos(player.rot) * fwdSpeed - Math.sin(player.rot) * sideSpeed;
+            
+            let nx = player.pos.x - dx;
+            let nz = player.pos.z - dz;
+
+            let collision = false;
+            if (nx < -9.5 || nx > 9.5 || nz < -9.5 || nz > 9.5) collision = true;
+
+            if (!collision) {
+                const pR = 0.3; 
+                for (let obs of obstacles) {
+                    const minX = obs.x - obs.w/2 - pR;
+                    const maxX = obs.x + obs.w/2 + pR;
+                    const minZ = obs.z - obs.d/2 - pR;
+                    const maxZ = obs.z + obs.d/2 + pR;
+
+                    if (nx > minX && nx < maxX && nz > minZ && nz < maxZ) {
+                        collision = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!collision) {
+                player.pos.x = nx;
+                player.pos.z = nz;
+            }
+
+            updateCameraWalk();
+        }
+
+        function updateCameraWalk() {
+            camera.position.copy(player.pos);
+            const lookX = player.pos.x - Math.sin(player.rot) * 10;
+            const lookZ = player.pos.z - Math.cos(player.rot) * 10;
+            camera.lookAt(lookX, player.pos.y, lookZ);
+        }
+
+        function checkInteractRay() {
+            if (Game.isDialogActive) return;
+
+            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+            const intersects = raycaster.intersectObjects(interactables, true);
+            const label = document.getElementById('interact-label');
+            
+            if(intersects.length > 0) {
+                let obj = intersects[0].object;
+                while(obj.parent && obj.parent.type !== 'Scene') {
+                    if(obj.name === 'breakfast' || obj.name === 'door') break;
+                    obj = obj.parent;
+                }
+
+                if(obj.position.distanceTo(player.pos) < 6) { 
+                    label.style.display = 'block';
+                    if(obj.name === 'breakfast') label.innerText = "👆 点击拾取早饭";
+                    else if(obj.name === 'door') label.innerText = player.hasBreakfast ? "👆 点击出门" : "🔒 门锁着";
+                    return;
+                }
+            }
+            label.style.display = 'none';
+        }
+
+        function onWorldInteract(e) {
+            if(e.target.id === 'joystick-knob' || e.target.id === 'joystick-zone') return;
+            
+            if(Game.mode !== 'WALK' || Game.isDialogActive) return;
+            const label = document.getElementById('interact-label');
+            if(label.style.display === 'none') return;
+
+            if(label.innerText.includes("拾取")) {
+                scene.remove(breakfastMesh);
+                interactables = interactables.filter(i => i !== breakfastMesh);
+                player.hasBreakfast = true;
+                label.style.display = 'none';
+                playScript(SCRIPTS.get_breakfast);
+                document.getElementById('task-msg').innerText = "任务：去大门离开";
+            }
+            else if(label.innerText.includes("锁")) {
+                playScript(SCRIPTS.cant_leave);
+            }
+            else if(label.innerText.includes("出门")) {
+                label.style.display = 'none';
+                playScript(SCRIPTS.ready_to_leave, () => {
+                    Game.mode = 'NONE';
+                    buildCityScene();
+                });
+            }
+        }
+
+        function updateDrive() {
+            if (Game.isDialogActive) return;
+
+            if(input.gas) car.speed += car.acceleration;
+            if(input.brake) car.speed -= car.acceleration * 3;
+            car.speed *= car.friction;
+            if(car.speed > car.maxSpeed) car.speed = car.maxSpeed;
+            if(car.speed < -0.1) car.speed = -0.1;
+
+            if(Math.abs(car.speed) > 0.01) {
+                if(input.left) car.angle += 0.035;
+                if(input.right) car.angle -= 0.035;
+            }
+
+            car.mesh.rotation.y = car.angle;
+            car.mesh.position.x += Math.sin(car.angle) * car.speed;
+            car.mesh.position.z += Math.cos(car.angle) * car.speed;
+
+            const relativeOffset = new THREE.Vector3(0, 8, -12); 
+            const cameraOffset = relativeOffset.applyMatrix4(car.mesh.matrixWorld);
+            camera.position.lerp(cameraOffset, 0.3); 
+            
+            const lookAtOffset = new THREE.Vector3(0, 0, 20);
+            lookAtOffset.applyMatrix4(car.mesh.matrixWorld);
+            camera.lookAt(lookAtOffset);
+
+            if(car.mesh.position.z < -340) {
+                Game.mode = 'END';
+                document.getElementById('drive-ui').style.display = 'none';
+                document.getElementById('task-msg').style.display = 'none';
+                playScript(SCRIPTS.meet, () => {
+                    document.getElementById('end-screen').style.display = 'flex';
+                });
+            }
+        }
+
+        let scriptQueue = [], scriptIdx = 0, onScriptEnd = null;
+        function playScript(list, callback) {
+            Game.isDialogActive = true; 
+            scriptQueue = list;
+            scriptIdx = 0;
+            onScriptEnd = callback;
+            updateDialog();
+        }
+        function updateDialog() {
+            const box = document.getElementById('dialog-box');
+            if(scriptIdx >= scriptQueue.length) {
+                box.style.display = 'none';
+                Game.isDialogActive = false; 
+                if(onScriptEnd) onScriptEnd();
+                return;
+            }
+            box.style.display = 'block';
+            const item = scriptQueue[scriptIdx];
+            document.getElementById('char-name').innerText = item.n;
+            document.getElementById('dialog-text').innerText = item.t;
+            
+            const av = document.getElementById('char-avatar');
+            const boxStyle = document.getElementById('dialog-box');
+            
+            if(item.img && item.img !== 'none' && !item.img.includes('none')) {
+                av.style.display = 'block'; 
+                av.style.backgroundImage = `url(${item.img})`;
+                boxStyle.style.paddingLeft = '140px'; 
+            } else {
+                av.style.display = 'none';
+                boxStyle.style.paddingLeft = '15px'; 
+            }
+        }
+        function nextDialog(e) {
+            if(e) e.stopPropagation(); 
+            scriptIdx++;
+            updateDialog();
+        }
+
+        const joyZone = document.getElementById('joystick-zone');
+        const joyKnob = document.getElementById('joystick-knob');
+        let joyStart = {x:0, y:0}, isJoyActive = false;
+        
+        joyZone.addEventListener('touchstart', e=>{
+            isJoyActive = true;
+            joyStart.x = e.touches[0].clientX;
+            joyStart.y = e.touches[0].clientY;
+            e.preventDefault();
+        });
+        joyZone.addEventListener('touchmove', e=>{
+            if(!isJoyActive) return;
+            e.preventDefault();
+            const dx = e.touches[0].clientX - joyStart.x;
+            const dy = e.touches[0].clientY - joyStart.y;
+            const dist = Math.min(Math.sqrt(dx*dx+dy*dy), 40);
+            const ang = Math.atan2(dy, dx);
+            const mx = Math.cos(ang)*dist;
+            const my = Math.sin(ang)*dist;
+            
+            joyKnob.style.transform = `translate(-50%, -50%) translate(${mx}px, ${my}px)`;
+            
+            input.x = mx/40; 
+            input.y = -(my/40); 
+            e.stopPropagation(); 
+        }, {passive:false});
+        
+        joyZone.addEventListener('touchend', ()=>{
+            isJoyActive = false;
+            joyKnob.style.transform = `translate(-50%, -50%)`;
+            input.x = 0; input.y = 0;
+        });
+
+        const lookZone = document.getElementById('touch-look-zone');
+        let lastLookX = 0;
+        
+        lookZone.addEventListener('touchstart', e => {
+            if(e.touches.length > 0) {
+                lastLookX = e.touches[0].clientX;
+            }
+        });
+        
+        lookZone.addEventListener('touchmove', e => {
+            if(Game.mode !== 'WALK' || Game.isDialogActive) return;
+            e.preventDefault();
+            
+            const currentX = e.touches[0].clientX;
+            const deltaX = currentX - lastLookX;
+            lastLookX = currentX;
+
+            player.rot -= deltaX * 0.005;
+        }, {passive:false});
+
+
+        const bindKey = (id, key) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', (e)=>{e.preventDefault(); input[key]=true});
+            el.addEventListener('touchend', (e)=>{e.preventDefault(); input[key]=false});
+            el.addEventListener('mousedown', ()=>{input[key]=true});
+            el.addEventListener('mouseup', ()=>{input[key]=false});
+        }
+        bindKey('btn-gas','gas'); bindKey('btn-brake','brake');
+        bindKey('btn-left','left'); bindKey('btn-right','right');
+
+        document.addEventListener('keydown', e=>{
+            const k=e.key.toLowerCase();
+            if(k==='w') {input.y = 1; input.gas=true;}
+            if(k==='s') {input.y = -1; input.brake=true;}
+            if(k==='a') {input.x = -1; input.left=true;} 
+            if(k==='d') {input.x = 1; input.right=true;}  
+        });
+        document.addEventListener('keyup', e=>{
+            const k=e.key.toLowerCase();
+            if(k==='w'||k==='s') {input.y=0; input.gas=false; input.brake=false;}
+            if(k==='a'||k==='d') {input.x=0; input.left=false; input.right=false;}
+        });
+    </script>
+</body>
+</html>
