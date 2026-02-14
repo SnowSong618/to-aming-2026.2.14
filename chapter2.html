@@ -201,10 +201,10 @@
             
             photos: [
                 { t: "我们一起做的第一棵圣诞树", d: "2022.12.25", img: 'p1.jpg' },
-                { t: "你画的我", d: "2023.9.25", img: 'p2.jpg' },
+                { t: "你画的我，我很喜欢这张", d: "2023.9.25", img: 'p2.jpg' },
                 { t: "我们在我的世界里建的小家", d: "2023.10.6", img: 'p3.jpg' },
-                { t: "给你写的歌", d: "2024.3.29", img: 'p4.jpg' },
-                { t: "这是我们的不分手合约", d: "2025.4.2", img: 'p5.jpg' },
+                { t: "给你写的歌，你在下面的留言我看到了哦，把我感动坏了", d: "2024.3.29", img: 'p4.jpg' },
+                { t: "这是我们的不分手合约，还记得不？", d: "2025.4.2", img: 'p5.jpg' },
                 { t: "我们终于见面了！", d: "2026.1.10至1.11", img: 'p6.jpg' }
             ]
         };
@@ -519,11 +519,11 @@
         function startMidTalkSeamless() {
             stopSpawning = true; 
             const sub = document.getElementById('subtitle');
-            sub.innerText = "诺子：阿铭，你有没有觉得这个开车的过程，就像是我们两个坚毅地排除生活中的种种困难一直走下去？";
+            sub.innerText = "诺子：阿铭，我觉得这个开车的过程，就像是我们两个坚毅地克种种困难一直走下去的样子";
             sub.style.opacity = 1;
             
             setTimeout(()=>{
-                sub.innerText = "诺子：我觉得很像，你看";
+                sub.innerText = "诺子：不信我们换个玩法～";
                 setTimeout(()=>{
                     gameState = 'GAME2';
                     stopSpawning = false; 
